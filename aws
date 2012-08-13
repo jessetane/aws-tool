@@ -7,7 +7,6 @@
 fs = require "fs"
 ec2 = require "ec2"
 path = require "path"
-cache = require "./lib/cache"
 
 
 #
@@ -18,36 +17,26 @@ cache = require "./lib/cache"
 commands =
   
   update: (region) ->
-    Fetcher = require "./lib/fetcher"
-    fetcher = new Fetcher tool
     cb = (err) ->
       if err
         console.log "Failed to get your info:\n\t", err
       else
         console.log "All your infos are belong to us" #\n", tool.cache
-        tool.cache.save()
+        aws.cache.save()
     if region
-      fetcher.allForRegion region, cb
+      aws.cache.updateAllForRegion region, cb
     else
-      fetcher.all cb
-
-  logon: (user) ->
-    require("./lib/logon") tool, user
+      aws.cache.updateAll cb
   
-  provision: ->
-    require("./lib/provision") tool
-  
-  terminate: ->
-    require("./lib/terminate") tool
-  
-  show: (what, arg) ->
-    display = require "./lib/display"
-    method = display["show" + what.slice(0, 1).toUpperCase() + what.slice 1]
-    if method?
-     method tool, arg
-    else
-      console.log "Unrecognized option"
-
+  route: (what, args...) ->
+    try
+      router = require "./lib/routers/" + what
+      arg = args.shift()
+      router[arg] args...
+    catch err
+      console.log "Unrecognized option", err
+      return false
+    return true
 
 #
 # The current working directory or a parent 
@@ -61,9 +50,9 @@ loadConfig = (dir) ->
       loadConfig path.normalize dir + "/.."
     else
       try
-        tool.root = dir
-        tool.config = JSON.parse data
-        tool.config.defaultRegion ?= "us-east-1"
+        aws.root = dir
+        aws.config = JSON.parse data
+        aws.config.defaultRegion ?= "us-east-1"
         loadCache()
       catch err
         console.log "Failed to parse #{dir}/.aws\n\t", err
@@ -74,13 +63,12 @@ loadConfig = (dir) ->
 # any data we pull down in a ".awscache" file
 #
 loadCache = ->
-  tool.cache = new cache
-  tool.cache.load (err) ->
+  Cache = require "./lib/cache"
+  aws.cache = new Cache
+  aws.cache.load (err) ->
     if err
       console.log "First time? Getting your info from Amazon..."
-      Fetcher = require "./lib/fetcher"
-      fetcher = new Fetcher tool
-      fetcher.all (err) ->
+      aws.cahce.updateAll (err) ->
         if err
           console.log "Failed to get your info:\n\t", err
         else
@@ -97,17 +85,17 @@ loadCache = ->
 handleArgs = ->
   args = process.argv.slice 2
   arg = args.shift()
-  if commands[arg]?
-    commands[arg] args...
+  if commands[arg]? then commands[arg] args...
+  else if commands.route (process.argv.slice 2)...
   else
     console.log "I'm sorry Dave..."
 
 
 #
-# The "tool" data structure contains references
+# The module exports references
 # to the cache, config, and an api enpoint generator
 #
-tool = 
+module.exports = aws =
   cache: null
   config: null
   commands: commands
@@ -115,7 +103,7 @@ tool =
     ec2
       key: @config.key
       secret: @config.secret
-      endpoint: region or tool.config.defaultRegion
+      endpoint: region or aws.config.defaultRegion
 
 
 # Kicks things off by searching 
