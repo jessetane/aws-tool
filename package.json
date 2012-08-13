@@ -1,0 +1,12 @@
+{
+  "name"          : "Caveman",
+  "description"   : "A command line assistant for AWS",
+  "author"        : "Jesse Tane <jesse.tane@gmail.com>",
+  "version"       : "0.0.1",
+  "dependencies"  : {
+    "coffee-script" : "*",
+    "ec2" : "*",
+    "async": "*",
+    "underscore": "*"
+  }
+}

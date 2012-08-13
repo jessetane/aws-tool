@@ -1,0 +1,123 @@
+#!/usr/bin/env coffee
+#
+# aws tool
+#
+
+
+fs = require "fs"
+ec2 = require "ec2"
+path = require "path"
+cache = require "./lib/cache"
+
+
+#
+# Commands are dynamically routed
+# just add one to the table below
+# and pass it as an agument
+#
+commands =
+  
+  update: (region) ->
+    Fetcher = require "./lib/fetcher"
+    fetcher = new Fetcher tool
+    cb = (err) ->
+      if err
+        console.log "Failed to get your info:\n\t", err
+      else
+        console.log "All your infos are belong to us" #\n", tool.cache
+        tool.cache.save()
+    if region
+      fetcher.allForRegion region, cb
+    else
+      fetcher.all cb
+
+  logon: (user) ->
+    require("./lib/logon") tool, user
+  
+  provision: ->
+    require("./lib/provision") tool
+  
+  terminate: ->
+    require("./lib/terminate") tool
+  
+  show: (what, arg) ->
+    display = require "./lib/display"
+    method = display["show" + what.slice(0, 1).toUpperCase() + what.slice 1]
+    if method?
+     method tool, arg
+    else
+      console.log "Unrecognized option"
+
+
+#
+# The current working directory or a parent 
+# must contain a ".aws" configuration file
+#
+loadConfig = (dir) ->
+  fs.readFile ".aws", "utf8", (err, data) ->
+    if err and dir is "/"
+      console.log "You seem lost..."
+    else if err
+      loadConfig path.normalize dir + "/.."
+    else
+      try
+        tool.root = dir
+        tool.config = JSON.parse data
+        tool.config.defaultRegion ?= "us-east-1"
+        loadCache()
+      catch err
+        console.log "Failed to parse #{dir}/.aws\n\t", err
+
+
+#
+# Since the API isn't super fast, we cache
+# any data we pull down in a ".awscache" file
+#
+loadCache = ->
+  tool.cache = new cache
+  tool.cache.load (err) ->
+    if err
+      console.log "First time? Getting your info from Amazon..."
+      Fetcher = require "./lib/fetcher"
+      fetcher = new Fetcher tool
+      fetcher.all (err) ->
+        if err
+          console.log "Failed to get your info:\n\t", err
+        else
+          handleArgs()
+    else
+      handleArgs()
+
+
+#
+# Handles the dynamic command routing -
+# add new commands directly to the commands 
+# table at the top and pass them as 1st arg
+#
+handleArgs = ->
+  args = process.argv.slice 2
+  arg = args.shift()
+  if commands[arg]?
+    commands[arg] args...
+  else
+    console.log "I'm sorry Dave..."
+
+
+#
+# The "tool" data structure contains references
+# to the cache, config, and an api enpoint generator
+#
+tool = 
+  cache: null
+  config: null
+  commands: commands
+  endpoint: (region) ->
+    ec2
+      key: @config.key
+      secret: @config.secret
+      endpoint: region or tool.config.defaultRegion
+
+
+# Kicks things off by searching 
+# for an ".aws" file in the cwd
+loadConfig process.cwd()
