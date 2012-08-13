@@ -56,8 +56,14 @@ module.exports = class Blueprint
     rl = util.readline()
     rl.question "Name this instance? [name] ", (name) =>
       rl.close()
-      userdata = fs.readFileSync aws.root + "/" + @user_data, "Base64"
-      instance = 
+      
+      # user data concats scripts and base64 encodes
+      userdata = ""
+      @user_data.forEach (script) -> 
+        userdata += fs.readFileSync aws.root + "/" + script, "Base64"
+        
+      # params
+      params = 
         "Placement.AvailabilityZone": @availabilityZone.zoneName
         UserData: userdata
         ImageId: @regions[@region]
@@ -67,13 +73,14 @@ module.exports = class Blueprint
         MaxCount: 1
       
       ec2 = aws.endpoint @region
-      ec2 "RunInstances", instance, (err, data) =>
+      ec2 "RunInstances", params, (err, data) =>
         if err
           console.log "Failed to launch instance", err
         else
           id = data.instancesSet[0].instanceId
           console.log "Launching instance - " + id
           
+          # tag params
           tags = {}
           if name?.length
             tags["ResourceId.1"] = id

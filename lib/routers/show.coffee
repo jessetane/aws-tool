@@ -16,6 +16,11 @@ module.exports.availabilityZonesForRegion = (regionName) ->
 module.exports.instances = ->
   require("../models/Instance").list()
   
+module.exports.instance = ->
+  Instance = require "../Models/Instance"
+  Instance.pickInstance (instance) ->
+    console.log instance
+    
 module.exports.elasticIps = ->
   require("../models/ElasticIp").list()
   

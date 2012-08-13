@@ -22,7 +22,7 @@ module.exports = class AvilabilityZone
   
   @pickZoneForRegion: (region, cb) ->
     zones = AvilabilityZone.listZonesForRegion region
-    util.picker "Please choose an availability zone", zones, "zoneName", cb  
+    util.picker "Please choose an availability zone", zones, "zoneName", cb
   
   #
   #
