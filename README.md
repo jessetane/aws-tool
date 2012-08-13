@@ -1,12 +1,12 @@
 # A command line assistant for AWS
-### Start with simple commands, the assistant will guide you the rest of the way.
+#### Start with simple commands, the assistant will guide you the rest of the way.
 
-## Update info
+### Update info
 ```bash
 aws update
 ```
 
-## Display resources
+### Display resources
 ```bash
 aws show instances
 aws show regions  
@@ -17,20 +17,20 @@ aws show blueprints
 aws show blueprintRegions
 ```
 
-## Add resources
+### Add resources
 ```bash
 aws add server
 aws add elasticIp
 aws add loadBalancer
 ```
 
-## Remove resources
+### Remove resources
 ```bash
 aws remove server
 ''
 ```
 
-## Configure resources
+### Configure resources
 ```bash
 aws configure server
 ''
