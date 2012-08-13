@@ -34,3 +34,17 @@ exports.proxy = (klass, name, container, originals...) ->
         else
           c = c[original]
     return val
+
+exports.picker = (message, list, prop, cb) ->
+  pick = ->
+    rl = exports.readline()
+    rl.question "#{message} [1-#{list.length}] ", (i) ->
+      rl.close()
+      choice = exports.selectNumericalChoice list, i
+      if choice
+        console.log " • " + (choice[prop] or choice)
+        cb choice
+      else
+        console.log "Invalid choice"
+        pick()
+  pick()

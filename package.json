@@ -5,8 +5,9 @@
   "version"       : "0.0.1",
   "dependencies"  : {
     "coffee-script" : "*",
-    "underscore": "*"
+    "underscore": "*",
     "async": "*",
-    "ec2" : "*",
+    "shell": "git://github.com/jessetane/shell.git",
+    "ec2" : "*"
   }
 }

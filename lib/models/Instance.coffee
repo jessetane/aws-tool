@@ -5,88 +5,68 @@
 _ = require "underscore"
 aws = require.main.exports
 util = require "../../util/util"
+shell = require "shell"
 proxy = util.proxy
 
 module.exports = class Instance
   
-  #
-  # Views
-  #
-  
   @list: ->
     instances = []
     console.log " • AWS Regions"
-    _.each aws.cache.regions, (region, name) ->
-      console.log " └─ " + name
+    _.each aws.cache.regions, (region, regionName) ->
+      console.log " └─ " + regionName
       regionHasInstances = _.any region.availabilityZones, (zone) -> zone.instances?
-      _.each region.availabilityZones, (zone, name) ->
+      _.each region.availabilityZones, (zone, zoneName) ->
         if regionHasInstances
-          console.log "   └─ " + name
+          console.log "   └─ " + zoneName
         _.each zone.instances, (instance) ->
           instance = new Instance instance
-          instance.region = region.regionName  # HACK: some callers need region info though...
+          instance.region = regionName  # HACK: some callers need region info though...
           instances.push instance
           msg = "     └─( " + instances.length + " )─ " + instance.id + " ─ "
           if instance.state isnt "running"
             msg += instance.state
           else
             msg += instance.dnsName
-          if instance.tagSet?[0]?
-            msg += " ─ " + instance.tagSet[0].key + ":" + instance.tagSet[0].value
+          _.each instance.tagSet, (tagSet) ->
+            msg += " ─ " + tagSet.key + ":" + tagSet.value
           console.log msg
     return instances
   
   @actions: ->
     actions = []
-    i = 1
     _.each Instance::, (method, action) ->
       if method
-        console.log " └─( " + i++ + " )─ " + action + "()"
         actions.push action
+        console.log " └─( " + actions.length + " )─ " + action + "()"
     return actions
-    
-
+  
+  @commands: ->
+    commands = []
+    _.each aws.config.commands, (cmd, name) ->
+      commands.push name
+      console.log " └─( " + commands.length + " )─ " + name + "()"
+    return commands
+  
   #
-  # Controls
+  #
   #
   
   @pickInstance: (cb) ->
-    instances = Instance.list()
-    pick = ->
-      rl = util.readline()
-      rl.question "Choose an instance [1-#{instances.length}] ", (i) ->
-        rl.close()
-        instance = util.selectNumericalChoice instances, i
-        if instance
-          console.log " • " + instance.id
-          cb instance
-        else
-          console.log "Invalid choice"
-          pick()
-    pick()
+    util.picker "Choose a instance", Instance.list(), "id", cb
   
   @pickAction: (cb) ->
-    actions = Instance.actions()
-    pick = ->
-      rl = util.readline()
-      rl.question "Choose an action [1-#{actions.length}] ", (i) ->
-        rl.close()
-        action = util.selectNumericalChoice actions, i
-        if action 
-          console.log " • " + action + "()"
-          cb action
-        else
-          console.log "Invalid choice"
-          pick()
-    pick()
+    util.picker "Choose a action", Instance.actions(), null, cb
 
+  @pickCommand: (cb) ->
+    util.picker "Choose a command", Instance.commands(), null, cb
+    
   
   #
-  # Model
+  #
   #
   
   proxy @, "id", "data", "instanceId"
-  proxy @, "region", "data"
   proxy @, "state", "data", "instanceState", "name"
   proxy @, "dnsName", "data"
   proxy @, "tagSet", "data"
@@ -94,6 +74,15 @@ module.exports = class Instance
   
   constructor: (data) ->
     @data = data
+  
+  command: (cb) =>
+    Instance.pickCommand (cmd) =>
+      cmd = aws.config.commands[cmd]
+      user = cmd.user
+      keypair = aws.config.keypairs[cmd.keypair]
+      cmd = shell "ssh -tt -i #{keypair} #{user}@#{@dnsName} '#{cmd.command}'"
+      cmd.stdout.on "data", (d) -> process.stdout.write d
+      cmd.stderr.on "data", (d) -> process.stdout.write d
   
   connect: =>
     rl = util.readline()
@@ -132,25 +121,19 @@ module.exports = class Instance
           process.stdin.resume()
           process.stdin.on "keypress", pipe
           ###
-    
-  reboot: (cb) =>
-    console.log "TODO"
-    
-  shutdown: (cb) =>
-    console.log "TODO"
-  
+        
   terminate: (cb) =>
     rl = util.readline()
     rl.question "You are about to terminate " + @id + ". Are you sure? [yN] ", (yn) =>
       rl.close()
       if yn is "y" or yn is "Y"
         ec2 = aws.endpoint @region
-        ec2 "TerminateInstances", { InstanceId: @id }, (err) ->
+        ec2 "TerminateInstances", { InstanceId: @id }, (err) =>
           if err
             console.log "Failed to terminate instance", err
           else
             console.log "Instance " + @id + " shutting down..."
-            setTimeout -> 
+            setTimeout => 
               console.log "Updating your info for " + @region
               aws.cache.updateAllForRegion @region
             , 1000

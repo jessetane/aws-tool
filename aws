@@ -68,11 +68,11 @@ loadCache = ->
   aws.cache.load (err) ->
     if err
       console.log "First time? Getting your info from Amazon..."
-      aws.cahce.updateAll (err) ->
+      aws.cache.updateAll (err) ->
         if err
           console.log "Failed to get your info:\n\t", err
         else
-          handleArgs()
+          aws.cache.save()
     else
       handleArgs()
 
