@@ -60,12 +60,12 @@ module.exports = class Blueprint
       # user data concats scripts and base64 encodes
       userdata = ""
       @user_data.forEach (script) -> 
-        userdata += fs.readFileSync aws.root + "/" + script, "Base64"
+        userdata += fs.readFileSync aws.root + "/" + script
         
       # params
       params = 
         "Placement.AvailabilityZone": @availabilityZone.zoneName
-        UserData: userdata
+        UserData: new Buffer(userdata).toString "base64"
         ImageId: @regions[@region]
         KeyName: @keyname
         InstanceType: @size
