@@ -9,29 +9,22 @@ aws update
 ### Display resources
 ```bash
 aws show instances
-aws show regions  
+aws show regions
 aws show availabilityZonesForRegion
 aws show instances
-aws show elasticIps  
+aws show elasticIps
 aws show blueprints
 aws show blueprintRegions
 ```
 
 ### Add resources
 ```bash
-aws add server
+aws add instances
 aws add elasticIp
 aws add loadBalancer
 ```
 
-### Remove resources
+### Manage resources
 ```bash
-aws remove server
-''
-```
-
-### Configure resources
-```bash
-aws configure server
-''
+aws manage instances
 ```

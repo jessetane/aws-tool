@@ -3,7 +3,7 @@
 # aws tool
 #
 
-
+_ = require "underscore"
 fs = require "fs"
 ec2 = require "ec2"
 path = require "path"
@@ -53,9 +53,27 @@ loadConfig = (dir) ->
         aws.root = dir
         aws.config = JSON.parse data
         aws.config.defaultRegion ?= "us-east-1"
-        loadCache()
+        if aws.config.extensions
+          loadExtensions()
+        else
+          loadCache()
       catch err
         console.log "Failed to parse #{dir}/.aws\n\t", err
+
+#
+# Config extensions
+#
+loadExtensions = ->
+  aws.config.extensions.forEach (extension) ->
+    try
+      data = fs.readFileSync aws.config.private, "utf8"
+      private = JSON.parse data
+      for section, data of private
+        aws.config[section] ?= {}
+        aws.config[section] = _.extend aws.config[section], data
+    catch err
+      console.log "Failed to load extension at:", extension
+  loadCache()
 
 
 #

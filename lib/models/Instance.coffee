@@ -28,8 +28,9 @@ module.exports = class Instance
             msg += instance.state
           else
             msg += instance.dnsName
-          _.each instance.tagSet, (tagSet) ->
-            msg += " ─ " + tagSet.key + ":" + tagSet.value
+          tagSet = _.sortBy instance.tagSet, (tag) -> tag.key
+          tagSet.forEach (set) ->
+            msg += " ─ " + set.key + ":" + set.value
           console.log msg
     return instances
   
@@ -75,15 +76,38 @@ module.exports = class Instance
   constructor: (data) ->
     @data = data
   
-  command: (cb) =>
+  command: =>
     Instance.pickCommand (cmd) =>
       cmd = aws.config.commands[cmd]
       user = cmd.user
       keypair = aws.config.keypairs[cmd.keypair]
-      cmd = shell "ssh -tt -i #{keypair} #{user}@#{@dnsName} '#{cmd.command}'"
-      cmd.stdout.on "data", (d) -> process.stdout.write d
-      cmd.stderr.on "data", (d) -> process.stdout.write d
+      if typeof cmd.command is "string"
+        @runCommand cmd.command
+      else
+        rl = util.readline()
+        script = cmd.command.script
+        params = cmd.command.params
+        cmd.command.params.forEach (param, n) =>
+          rl.question param, (answer) =>
+            script += " "
+            script += answer
+            if n == params.length-1
+              rl.close()
+              @generateCommand script
+        
+  generateCommand = (script) =>
+    shell script, (err, command) =>
+      if not err
+        command = command.replace "'", "\\'"
+        @runCommand command
+      else
+        console.log "Failed to load command from script:", cmd.command.script
   
+  runCommand = (command) =>
+    cmd = shell "ssh -tt -i #{keypair} #{user}@#{@dnsName} '#{command}'"
+    cmd.stdout.on "data", (d) -> process.stdout.write d
+    cmd.stderr.on "data", (d) -> process.stdout.write d
+        
   connect: =>
     rl = util.readline()
     rl.question "As what user? ", (user) =>
@@ -110,13 +134,11 @@ module.exports = class Instance
           #
           exec = require('child_process').exec
           ssh = exec "ssh ec2-user@" + instance.dnsName + " -t -t -i " + keypath
-          #
           ssh.stdout.on "data", (d) -> process.stdout.write d
           ssh.stderr.on "data", (d) -> process.stdout.write d
           ssh.on "exit", (d) ->
             process.stdin.pause()
             process.stdin.removeListener "data", pipe
-          #
           pipe = (d) -> ssh.stdin.write d
           process.stdin.resume()
           process.stdin.on "keypress", pipe

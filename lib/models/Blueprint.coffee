@@ -56,45 +56,56 @@ module.exports = class Blueprint
     rl = util.readline()
     rl.question "Name this instance? [name] ", (name) =>
       rl.close()
+      @name = name
       
-      # user data concats scripts and base64 encodes
-      userdata = ""
-      @user_data.forEach (script) -> 
-        userdata += fs.readFileSync aws.root + "/" + script
-        
-      # params
-      params = 
-        "Placement.AvailabilityZone": @availabilityZone.zoneName
-        UserData: new Buffer(userdata).toString "base64"
-        ImageId: @regions[@region]
-        KeyName: @keyname
-        InstanceType: @size
-        MinCount: 1
-        MaxCount: 1
-      
-      ec2 = aws.endpoint @region
-      ec2 "RunInstances", params, (err, data) =>
-        if err
-          console.log "Failed to launch instance", err
-        else
-          id = data.instancesSet[0].instanceId
-          console.log "Launching instance - " + id
-          
-          # tag params
-          tags = {}
-          if name?.length
-            tags["ResourceId.1"] = id
-            tags["Tag.1.Key"] = "Name"
-            tags["Tag.1.Value"] = name
-          tags["ResourceId.2"] = id
-          tags["Tag.2.Key"] = "Type"
-          tags["Tag.2.Value"] = @type
-          
-          ec2 "CreateTags", tags, (err, data) =>
-            if err
-              console.log "Failed to tag instance", err
-            setTimeout =>
-              console.log "Updating your info for " + @region
-              aws.cache.updateAllForRegion @region
-            , 500
+      # user data is either a string, an array of file paths, or a script that generates a string
+      if _.isString @user_data
+        @runInstances()
+      else if _.isArray @user_data
+        data = ""
+        @user_data.forEach (script) -> 
+          data += fs.readFileSync aws.root + "/" + script
+        @user_data = data
+        @runInstances()
+      else
+        shell @user_data.script, (err, data) =>
+          if not err
+            @user_data = data
+            @runInstances()
+          else
+            console.log "user_data generator failed:", err
+            
+  runInstances: =>
+    params = 
+      "Placement.AvailabilityZone": @availabilityZone.zoneName
+      UserData: new Buffer(@user_data).toString "base64"
+      ImageId: @regions[@region]
+      KeyName: @keyname
+      InstanceType: @size
+      MinCount: 1
+      MaxCount: 1
+    ec2 = aws.endpoint @region
+    ec2 "RunInstances", params, (err, data) =>
+      if err
+        console.log "Failed to launch instance", err
+      else
+        id = data.instancesSet[0].instanceId
+        console.log "Launching instance - " + id
+        @createTags()
     
+  createTags: =>
+    params = {}
+    if @name?.length
+      params["ResourceId.1"] = id
+      params["Tag.1.Key"] = "Name"
+      params["Tag.1.Value"] = @name
+    params["ResourceId.2"] = id
+    params["Tag.2.Key"] = "Type"
+    params["Tag.2.Value"] = @type
+    ec2 "CreateTags", params, (err, data) =>
+      if err
+        console.log "Failed to tag instance", err
+      setTimeout =>
+        console.log "Updating your info for " + @region
+        aws.cache.updateAllForRegion @region
+      , 500
