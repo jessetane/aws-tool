@@ -31,11 +31,11 @@ commands =
   route: (what, args...) ->
     try
       router = require "./lib/routers/" + what
-      arg = args.shift()
-      router[arg] args...
     catch err
-      console.log "Unrecognized option", err
+      console.log "Unrecognized option"
       return false
+    arg = args.shift()
+    router[arg] args...
     return true
 
 #
@@ -64,15 +64,18 @@ loadConfig = (dir) ->
 # Config extensions
 #
 loadExtensions = ->
-  aws.config.extensions.forEach (extension) ->
+  aws.config.extensions.forEach (extensionFile) ->
     try
-      data = fs.readFileSync aws.config.private, "utf8"
-      private = JSON.parse data
-      for section, data of private
-        aws.config[section] ?= {}
-        aws.config[section] = _.extend aws.config[section], data
+      data = fs.readFileSync extensionFile, "utf8"
+      extension = JSON.parse data
+      for section, data of extension
+        if _.isObject data
+          aws.config[section] ?= {}
+          aws.config[section] = _.extend aws.config[section], data
+        else
+          aws.config[section] = data
     catch err
-      console.log "Failed to load extension at:", extension
+      console.log "Failed to load extension \"#{extensionFile}\":", err
   loadCache()
 
 

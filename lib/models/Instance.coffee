@@ -159,4 +159,3 @@ module.exports = class Instance
               console.log "Updating your info for " + @region
               aws.cache.updateAllForRegion @region
             , 1000
-

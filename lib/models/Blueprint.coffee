@@ -63,8 +63,12 @@ module.exports = class Blueprint
         @runInstances()
       else if _.isArray @user_data
         data = ""
-        @user_data.forEach (script) -> 
-          data += fs.readFileSync aws.root + "/" + script
+        for script in @user_data
+          try
+            data += fs.readFileSync aws.root + "/" + script
+          catch err
+            console.log "Failed to load user_data file:", script
+            return
         @user_data = data
         @runInstances()
       else
@@ -84,25 +88,25 @@ module.exports = class Blueprint
       InstanceType: @size
       MinCount: 1
       MaxCount: 1
-    ec2 = aws.endpoint @region
-    ec2 "RunInstances", params, (err, data) =>
+    @ec2 = aws.endpoint @region
+    @ec2 "RunInstances", params, (err, data) =>
       if err
         console.log "Failed to launch instance", err
       else
-        id = data.instancesSet[0].instanceId
-        console.log "Launching instance - " + id
+        @id = data.instancesSet[0].instanceId
+        console.log "Launching instance - " + @id
         @createTags()
     
   createTags: =>
     params = {}
     if @name?.length
-      params["ResourceId.1"] = id
+      params["ResourceId.1"] = @id
       params["Tag.1.Key"] = "Name"
       params["Tag.1.Value"] = @name
-    params["ResourceId.2"] = id
+    params["ResourceId.2"] = @id
     params["Tag.2.Key"] = "Type"
     params["Tag.2.Value"] = @type
-    ec2 "CreateTags", params, (err, data) =>
+    @ec2 "CreateTags", params, (err, data) =>
       if err
         console.log "Failed to tag instance", err
       setTimeout =>
