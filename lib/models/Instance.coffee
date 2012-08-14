@@ -95,7 +95,7 @@ module.exports = class Instance
               rl.close()
               @generateCommand script
         
-  generateCommand = (script) =>
+  generateCommand: (script) =>
     shell script, (err, command) =>
       if not err
         command = command.replace "'", "\\'"
@@ -103,7 +103,7 @@ module.exports = class Instance
       else
         console.log "Failed to load command from script:", cmd.command.script
   
-  runCommand = (command) =>
+  runCommand: (command) =>
     cmd = shell "ssh -tt -i #{keypair} #{user}@#{@dnsName} '#{command}'"
     cmd.stdout.on "data", (d) -> process.stdout.write d
     cmd.stderr.on "data", (d) -> process.stdout.write d
