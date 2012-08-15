@@ -35,7 +35,11 @@ commands =
       console.log "Unrecognized option"
       return false
     arg = args.shift()
-    router[arg] args...
+    if router[arg]?
+      router[arg] args...
+    else
+      console.log "Unrecognized option"
+      return true
     return true
 
 #
