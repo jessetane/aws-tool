@@ -42,7 +42,19 @@ exports.picker = (message, list, prop, cb) ->
       rl.close()
       choice = exports.selectNumericalChoice list, i
       if choice
-        console.log " • " + (choice[prop] or choice)
+        msg = " • "
+        if prop
+          if prop.forEach? 
+            prop.forEach (prop, i) -> 
+              if i > 0
+                msg += " ─ " + choice[prop]
+              else
+                msg += choice[prop]
+          else
+            msg += choice[prop]  
+        else
+          msg += choice
+        console.log msg
         cb choice
       else
         console.log "Invalid choice"

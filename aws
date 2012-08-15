@@ -47,7 +47,7 @@ commands =
 # must contain a ".aws" configuration file
 #
 loadConfig = (dir) ->
-  fs.readFile ".aws", "utf8", (err, data) ->
+  fs.readFile dir + "/.aws", "utf8", (err, data) ->
     if err and dir is "/"
       console.log "You seem lost..."
     else if err
@@ -69,6 +69,7 @@ loadConfig = (dir) ->
 #
 loadExtensions = ->
   aws.config.extensions.forEach (extensionFile) ->
+    extensionFile = aws.root + "/" + extensionFile
     try
       data = fs.readFileSync extensionFile, "utf8"
       extension = JSON.parse data

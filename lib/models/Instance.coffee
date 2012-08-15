@@ -28,18 +28,17 @@ module.exports = class Instance
             msg += instance.state
           else
             msg += instance.dnsName
-          tagSet = _.sortBy instance.tagSet, (tag) -> tag.key
-          tagSet.forEach (set) ->
-            msg += " ─ " + set.key + ":" + set.value
+          if instance.tagSet?.length
+            msg += " ─ "
+            msg += instance.tags.join " ─ "
           console.log msg
     return instances
   
   @actions: ->
     actions = []
-    _.each Instance::, (method, action) ->
-      if method
-        actions.push action
-        console.log " └─( " + actions.length + " )─ " + action + "()"
+    _.each [ "command", "connect", "terminate" ], (action) ->
+      actions.push action
+      console.log " └─( " + actions.length + " )─ " + action + "()"
     return actions
   
   @commands: ->
@@ -54,7 +53,7 @@ module.exports = class Instance
   #
   
   @pickInstance: (cb) ->
-    util.picker "Choose a instance", Instance.list(), "id", cb
+    util.picker "Choose a instance", Instance.list(), [ "id", "tagString" ], cb  # note - add tag!
   
   @pickAction: (cb) ->
     util.picker "Choose a action", Instance.actions(), null, cb
@@ -72,6 +71,12 @@ module.exports = class Instance
   proxy @, "dnsName", "data"
   proxy @, "tagSet", "data"
   proxy @, "keyName", "data"
+  @::__defineGetter__ "tags", ->
+    tagSet = _.sortBy @tagSet, (tag) -> tag.key
+    tagSet.map (tag) -> tag.key + ":" + tag.value
+  @::__defineGetter__ "tagString", ->
+    @tags.join " ─ "
+  
   
   constructor: (data) ->
     @data = data
@@ -83,7 +88,7 @@ module.exports = class Instance
       keypair = aws.config.keypairs[cmd.keypair]
       
       generateCommand = (script) =>
-        shell script, (err, command) =>
+        shell aws.root + "/" + script, (err, command) =>
           if not err
             #command = command.replace /'/g, "\\'"
             runCommand command
@@ -91,7 +96,7 @@ module.exports = class Instance
             console.log "Failed to load command from script \"#{cmd.command.script}\":", err
 
       runCommand = (command) =>
-        command = "ssh -tt -i #{keypair} #{user}@#{@dnsName} '#{command}'"
+        command = "ssh -tt -i #{aws.root + "/" + keypair} #{user}@#{@dnsName} '#{command}'"
         cmd = shell command
         cmd.stdout.on "data", (d) -> process.stdout.write d
         cmd.stderr.on "data", (d) -> process.stdout.write d
