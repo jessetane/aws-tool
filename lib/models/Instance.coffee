@@ -81,8 +81,23 @@ module.exports = class Instance
       cmd = aws.config.commands[cmd]
       user = cmd.user
       keypair = aws.config.keypairs[cmd.keypair]
+      
+      generateCommand = (script) =>
+        shell script, (err, command) =>
+          if not err
+            #command = command.replace /'/g, "\\'"
+            runCommand command
+          else
+            console.log "Failed to load command from script \"#{cmd.command.script}\":", err
+
+      runCommand = (command) =>
+        command = "ssh -tt -i #{keypair} #{user}@#{@dnsName} '#{command}'"
+        cmd = shell command
+        cmd.stdout.on "data", (d) -> process.stdout.write d
+        cmd.stderr.on "data", (d) -> process.stdout.write d
+      
       if typeof cmd.command is "string"
-        @runCommand cmd.command
+        runCommand cmd.command
       else
         rl = util.readline()
         script = cmd.command.script
@@ -93,20 +108,7 @@ module.exports = class Instance
             script += answer
             if n == params.length-1
               rl.close()
-              @generateCommand script
-        
-  generateCommand: (script) =>
-    shell script, (err, command) =>
-      if not err
-        command = command.replace "'", "\\'"
-        @runCommand command
-      else
-        console.log "Failed to load command from script:", cmd.command.script
-  
-  runCommand: (command) =>
-    cmd = shell "ssh -tt -i #{keypair} #{user}@#{@dnsName} '#{command}'"
-    cmd.stdout.on "data", (d) -> process.stdout.write d
-    cmd.stderr.on "data", (d) -> process.stdout.write d
+              generateCommand script
         
   connect: =>
     rl = util.readline()
