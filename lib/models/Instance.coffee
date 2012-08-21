@@ -104,16 +104,19 @@ module.exports = class Instance
       if typeof cmd.command is "string"
         runCommand cmd.command
       else
-        rl = util.readline()
         script = cmd.command.script
         params = cmd.command.params
-        cmd.command.params.forEach (param, n) =>
-          rl.question param, (answer) =>
-            script += " "
-            script += answer
-            if n == params.length-1
+        getParam = ->
+          if not params or params.length == 0
+            generateCommand script
+          else
+            rl = util.readline()
+            rl.question params.shift(), (answer) =>
+              script += " "
+              script += answer
               rl.close()
-              generateCommand script
+              getParam()
+        getParam()
         
   connect: =>
     rl = util.readline()
