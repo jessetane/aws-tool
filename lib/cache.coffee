@@ -12,7 +12,7 @@ aws = require.main.exports
 module.exports = class Cache
   
   load: (cb) =>
-    fs.readFile ".awscache", "utf8", (err, data) =>
+    fs.readFile "#{aws.root}/.awscache", "utf8", (err, data) =>
       if not err
         try
           data = JSON.parse data
@@ -24,7 +24,7 @@ module.exports = class Cache
   save: (cb) =>
     string = JSON.stringify @
     fs.writeFile ".awscache", string, cb
-    
+  
   updateAll: (cb) =>
     @regions = {}
     async.parallel [

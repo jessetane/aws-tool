@@ -119,7 +119,7 @@ handleArgs = ->
 
 #
 # The module exports references
-# to the cache, config, and an api enpoint generator
+# to the cache, config, and an api endpoint generator
 #
 module.exports = aws =
   cache: null
