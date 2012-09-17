@@ -4,7 +4,7 @@
   "author": "Jesse Tane <jesse.tane@gmail.com>",
   "version": "0.0.2",
   "bin": {
-    "aws": "aws-tool.coffee"
+    "aws-tool": "aws-tool.coffee"
   },
   "dependencies"  : {
     "coffee-script" : "*",
