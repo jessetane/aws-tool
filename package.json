@@ -1,8 +1,11 @@
 {
-  "name"          : "aws",
-  "description"   : "A command line assistant for AWS",
-  "author"        : "Jesse Tane <jesse.tane@gmail.com>",
-  "version"       : "0.0.1",
+  "name": "aws",
+  "description": "A command line assistant for AWS",
+  "author": "Jesse Tane <jesse.tane@gmail.com>",
+  "version": "0.0.2",
+  "bin": {
+    "aws": "aws-tool.coffee"
+  },
   "dependencies"  : {
     "coffee-script" : "*",
     "underscore": "*",

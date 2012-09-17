@@ -1,6 +1,6 @@
 #!/usr/bin/env coffee
 #
-# aws tool
+# aws-tool.coffee
 #
 
 _ = require "underscore"
